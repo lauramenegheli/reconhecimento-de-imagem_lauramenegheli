@@ -1,5 +1,23 @@
 def eh_primo(n):
-    """Retorna True se n for primo, caso contr�rio False."""
+    """
+    Verifica se um número é primo.
+    
+    Esta função implementa o teste de primalidade para números inteiros,
+    utilizando uma otimização baseada no algoritmo de verificação de divisores
+    até a raiz quadrada do número.
+    
+    Args:
+        n (int): O número inteiro a ser verificado se é primo.
+    
+    Returns:
+        bool: True se o número for primo, False caso contrário.
+    
+    Examples:
+        >>> eh_primo(2)
+        True
+        >>> eh_primo(4)
+        False
+    """
     if n <= 1:
         return False
     if n <= 3:
