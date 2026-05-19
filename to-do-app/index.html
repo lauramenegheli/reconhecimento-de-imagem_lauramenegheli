@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador de Tarefas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { dark: '#0f172a' }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-image:
+                radial-gradient(circle at top right, rgba(30, 64, 175, 0.12), transparent 40%),
+                radial-gradient(circle at bottom left, rgba(16, 185, 129, 0.06), transparent 40%);
+            min-height: 100vh;
+        }
+
+        .glass {
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .glass-card {
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .hidden { display: none !important; }
+
+        .fade-in { animation: fadeIn 0.35s ease-out; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Inputs e selects unificados */
+        .input-dark {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(71, 85, 105, 0.7);
+            border-radius: 0.5rem;
+            padding: 0.75rem 1rem;
+            color: #e2e8f0;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+            font-size: 0.9rem;
+        }
+        .input-dark::placeholder { color: #475569; }
+        .input-dark:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+        }
+
+        select.input-dark option {
+            background: #1e293b;
+            color: #e2e8f0;
+        }
+
+        /* Badge tipos */
+        .badge-trabalho  { background: rgba(59,130,246,0.18); color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); }
+        .badge-pessoal   { background: rgba(168,85,247,0.18); color: #d8b4fe; border: 1px solid rgba(168,85,247,0.3); }
+        .badge-estudos   { background: rgba(16,185,129,0.18); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
+
+        /* Card de tarefa concluída */
+        .task-done {
+            opacity: 0.45;
+        }
+        .task-done .task-title {
+            text-decoration: line-through;
+        }
+
+        /* Botão concluir */
+        .btn-concluir {
+            font-size: 0.75rem;
+            padding: 0.35rem 0.85rem;
+            border-radius: 0.4rem;
+            border: 1px solid rgba(71, 85, 105, 0.5);
+            background: rgba(30, 41, 59, 0.6);
+            color: #94a3b8;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .btn-concluir:hover {
+            background: rgba(16, 185, 129, 0.15);
+            border-color: rgba(16, 185, 129, 0.4);
+            color: #6ee7b7;
+        }
+        .btn-concluir:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        /* Scrollbar sutil */
+        #task-list::-webkit-scrollbar { width: 4px; }
+        #task-list::-webkit-scrollbar-track { background: transparent; }
+        #task-list::-webkit-scrollbar-thumb { background: rgba(71, 85, 105, 0.4); border-radius: 2px; }
+    </style>
+</head>
+<body class="p-4 flex items-start justify-center">
+
+    <!-- ======================== AUTH CONTAINER ======================== -->
+    <div id="auth-container" class="w-full max-w-md glass rounded-2xl p-8 mt-16 fade-in">
+
+        <!-- Login -->
+        <div id="login-form">
+            <h2 class="text-3xl font-light mb-8 text-center tracking-wide text-white">Login</h2>
+            <form id="form-login" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-medium mb-1.5 text-slate-300">E-mail</label>
+                    <input type="email" id="login-email" class="input-dark" placeholder="seu@email.com">
+                    <p id="login-email-error" class="text-red-400 text-xs mt-1.5 hidden"></p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1.5 text-slate-300">Senha</label>
+                    <input type="password" id="login-password" class="input-dark" placeholder="••••••••">
+                    <p id="login-password-error" class="text-red-400 text-xs mt-1.5 hidden"></p>
+                </div>
+                <p id="login-general-error" class="text-red-400 text-sm text-center hidden"></p>
+                <button type="submit" id="btn-login-submit"
+                    class="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-3 rounded-lg transition-all shadow-[0_0_15px_rgba(37,99,235,0.3)] hover:shadow-[0_0_25px_rgba(37,99,235,0.5)] mt-1">
+                    Entrar
+                </button>
+            </form>
+            <p class="text-center text-sm text-slate-400 mt-8">
+                Não tem uma conta?
+                <button id="btn-show-register" class="text-blue-400 hover:text-blue-300 transition-colors font-medium">Cadastre-se</button>
+            </p>
+        </div>
+
+        <!-- Cadastro -->
+        <div id="register-form" class="hidden">
+            <h2 class="text-3xl font-light mb-8 text-center tracking-wide text-white">Cadastro</h2>
+            <form id="form-register" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-medium mb-1.5 text-slate-300">Nome</label>
+                    <input type="text" id="reg-name" class="input-dark" placeholder="Seu nome completo">
+                    <p id="reg-name-error" class="text-red-400 text-xs mt-1.5 hidden"></p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1.5 text-slate-300">E-mail</label>
+                    <input type="email" id="reg-email" class="input-dark" placeholder="seu@email.com">
+                    <p id="reg-email-error" class="text-red-400 text-xs mt-1.5 hidden"></p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1.5 text-slate-300">Senha</label>
+                    <input type="password" id="reg-password" class="input-dark" placeholder="••••••••">
+                    <p id="reg-password-error" class="text-red-400 text-xs mt-1.5 hidden"></p>
+                </div>
+                <p id="reg-general-error" class="text-red-400 text-sm text-center hidden"></p>
+                <p id="reg-success-msg" class="text-emerald-400 text-sm text-center hidden font-medium">✓ Cadastro realizado! Redirecionando...</p>
+                <button type="submit" id="btn-register-submit"
+                    class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-3 rounded-lg transition-all shadow-[0_0_15px_rgba(5,150,105,0.3)] hover:shadow-[0_0_25px_rgba(5,150,105,0.5)] mt-1">
+                    Criar Conta
+                </button>
+            </form>
+            <p class="text-center text-sm text-slate-400 mt-8">
+                Já tem uma conta?
+                <button id="btn-show-login" class="text-emerald-400 hover:text-emerald-300 transition-colors font-medium">Faça Login</button>
+            </p>
+        </div>
+    </div>
+
+    <!-- ======================== APP CONTAINER ======================== -->
+    <div id="app-container" class="hidden w-full max-w-3xl fade-in mt-10 mb-12">
+
+        <!-- Header -->
+        <header class="glass rounded-2xl px-7 py-5 flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-xl font-semibold text-white tracking-tight">Minhas Tarefas</h1>
+                <p id="user-greeting" class="text-slate-400 text-sm mt-0.5"></p>
+            </div>
+            <button id="btn-logout"
+                class="px-4 py-2 bg-slate-800/80 hover:bg-red-500/10 hover:text-red-400 border border-slate-700 hover:border-red-500/30 rounded-lg transition-all text-sm font-medium text-slate-300">
+                Sair da Conta
+            </button>
+        </header>
+
+        <!-- Formulário Nova Tarefa -->
+        <section class="glass rounded-2xl p-7 mb-6">
+            <h2 class="text-base font-semibold text-slate-200 mb-5 flex items-center gap-2">
+                <span class="w-5 h-5 rounded-full bg-blue-500/20 border border-blue-500/40 flex items-center justify-center text-blue-400 text-xs">+</span>
+                Nova Tarefa
+            </h2>
+            <form id="form-add-task" class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="sm:col-span-2">
+                        <label class="block text-xs font-medium mb-1.5 text-slate-400 uppercase tracking-wider">Título <span class="text-red-400">*</span></label>
+                        <input type="text" id="task-title" class="input-dark" placeholder="Ex: Revisar apresentação...">
+                        <p id="task-title-error" class="text-red-400 text-xs mt-1.5 hidden"></p>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium mb-1.5 text-slate-400 uppercase tracking-wider">Tipo</label>
+                        <select id="task-type" class="input-dark">
+                            <option value="Trabalho">💼 Trabalho</option>
+                            <option value="Pessoal">🏠 Pessoal</option>
+                            <option value="Estudos">📚 Estudos</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium mb-1.5 text-slate-400 uppercase tracking-wider">Descrição <span class="text-slate-600 font-normal normal-case tracking-normal">(opcional)</span></label>
+                        <textarea id="task-description" class="input-dark resize-none" rows="1" placeholder="Detalhes da tarefa..."></textarea>
+                    </div>
+                </div>
+                <div class="flex justify-end pt-1">
+                    <button type="submit" id="btn-add-task"
+                        class="px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-all shadow-[0_0_12px_rgba(37,99,235,0.25)] hover:shadow-[0_0_20px_rgba(37,99,235,0.4)]">
+                        Adicionar Tarefa
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- Listagem de Tarefas -->
+        <section class="glass rounded-2xl p-7">
+            <div class="flex justify-between items-center mb-5">
+                <h2 class="text-base font-semibold text-slate-200 flex items-center gap-2">
+                    <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                    </svg>
+                    Tarefas
+                </h2>
+                <span id="task-counter" class="text-xs text-slate-500 bg-slate-800/60 px-2.5 py-1 rounded-full border border-slate-700/50"></span>
+            </div>
+            <div id="task-list" class="space-y-3 max-h-[420px] overflow-y-auto pr-1">
+                <!-- Tasks renderizadas pelo JS -->
+            </div>
+            <!-- Empty state -->
+            <div id="empty-state" class="hidden flex flex-col items-center justify-center py-14 text-slate-600">
+                <svg class="w-14 h-14 mb-4 text-slate-800" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+                </svg>
+                <p class="text-sm">Nenhuma tarefa cadastrada ainda.</p>
+                <p class="text-xs mt-1 text-slate-700">Use o formulário acima para adicionar sua primeira tarefa.</p>
+            </div>
+        </section>
+
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
